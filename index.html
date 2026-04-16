@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthShield — Secure Healthcare Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a; --surface:#0f1626; --surface2:#151d2e;
+    --border:#1e2d47; --accent:#00d4ff; --accent2:#0088cc;
+    --accent3:#00ff9d; --warn:#ffb347; --danger:#ff4757;
+    --muted:#4a6080; --text:#c8d8f0; --text-bright:#e8f2ff;
+    --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+
+  .login-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+  .login-screen.hidden{display:none;}
+  .login-bg{position:absolute;inset:0;overflow:hidden;}
+  .login-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(0,212,255,0.06) 0%,transparent 70%);}
+  .grid-lines{position:absolute;inset:0;background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px);background-size:40px 40px;}
+  .login-box{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
+  .login-logo{text-align:center;margin-bottom:28px;}
+  .login-logo-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;margin:0 auto 12px;font-family:var(--mono);}
+  .login-logo-user .login-logo-icon{background:linear-gradient(135deg,var(--accent3),#00aa6a);}
+  .login-logo-admin .login-logo-icon{background:linear-gradient(135deg,var(--danger),#cc1122);}
+  .login-logo h1{font-size:22px;font-weight:700;color:var(--text-bright);}
+  .login-logo p{font-size:13px;color:var(--muted);margin-top:4px;}
+  .login-role-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--mono);text-transform:uppercase;letter-spacing:2px;margin-top:8px;}
+  .badge-user-role{background:rgba(0,255,157,0.1);color:var(--accent3);border:1px solid rgba(0,255,157,0.3);}
+  .badge-admin-role{background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.3);}
+  .login-form-group{margin-bottom:16px;}
+  .login-form-group label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;}
+  .login-form-group input{width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--sans);font-size:14px;transition:border-color 0.2s;outline:none;}
+  .login-form-group input:focus{border-color:var(--accent);}
+  .login-form-group.admin-input input:focus{border-color:var(--danger);}
+  .login-btn{width:100%;padding:13px;border-radius:9px;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all 0.2s;margin-top:8px;}
+  .login-btn-user{background:linear-gradient(135deg,var(--accent3),#00aa6a);color:#000;}
+  .login-btn-user:hover{filter:brightness(1.1);}
+  .login-btn-admin{background:linear-gradient(135deg,var(--danger),#cc1122);color:#fff;}
+  .login-btn-admin:hover{filter:brightness(1.1);}
+  .login-hint{text-align:center;margin-top:16px;font-size:12px;color:var(--muted);font-family:var(--mono);}
+  .login-switch{text-align:center;margin-top:20px;font-size:12px;color:var(--muted);}
+  .login-switch a{color:var(--accent);cursor:pointer;text-decoration:none;}
+  .login-switch a:hover{text-decoration:underline;}
+  .login-error{background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:14px;display:none;}
+  .login-error.show{display:block;}
+
+  .interface-switcher{position:fixed;top:0;left:0;right:0;z-index:500;background:#060a12;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;padding:8px 16px;height:44px;}
+  .interface-switcher span{font-size:11px;color:var(--muted);font-family:var(--mono);margin-right:12px;}
+  .sw-btn{padding:5px 18px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--muted);font-family:var(--sans);}
+  .sw-btn.active-user{background:rgba(0,255,157,0.15);border-color:var(--accent3);color:var(--accent3);}
+  .sw-btn.active-admin{background:rgba(255,71,87,0.15);border-color:var(--danger);color:var(--danger);}
+  .live-badge{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--danger);font-family:var(--mono);}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--danger);animation:blink 1s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+  .app-wrap{margin-top:44px;display:flex;min-height:calc(100vh - 44px);}
+
+  .sidebar{position:fixed;left:0;top:44px;bottom:0;width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:transform 0.3s;}
+  .sidebar-logo{padding:20px;border-bottom:1px solid var(--border);}
+  .logo-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;color:#fff;font-weight:700;margin-bottom:8px;}
+  .logo-user .logo-icon{background:linear-gradient(135deg,var(--accent3),#00cc7a);}
+  .logo-admin .logo-icon{background:linear-gradient(135deg,var(--danger),#cc0020);}
+  .sidebar-logo h2{font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:var(--mono);}
+  .logo-user h2{color:var(--accent3);}
+  .logo-admin h2{color:var(--danger);}
+  .sidebar-logo p{font-size:10px;color:var(--muted);margin-top:2px;}
+  nav{flex:1;padding:12px 0;overflow-y:auto;}
+  .nav-section{padding:8px 20px 4px;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-family:var(--mono);}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:all 0.2s;font-size:13px;font-weight:500;border-left:3px solid transparent;color:var(--text);}
+  .nav-item:hover{background:var(--surface2);color:var(--text-bright);}
+  .nav-item.active{background:rgba(0,212,255,0.08);border-left-color:var(--accent);color:var(--accent);}
+  .admin-nav .nav-item.active{background:rgba(255,71,87,0.08);border-left-color:var(--danger);color:var(--danger);}
+  .nav-item .icon{font-size:15px;width:20px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-family:var(--mono);animation:blink 2s infinite;}
+  .sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .online-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent3);margin-right:6px;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  .main{margin-left:240px;flex:1;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:44px;z-index:50;}
+  .page-title{font-size:14px;font-weight:600;color:var(--text-bright);}
+  .breadcrumb{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .topbar-right{display:flex;align-items:center;gap:12px;}
+  .btn-sm{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;font-family:var(--sans);}
+  .btn-primary{background:var(--accent);color:#000;}
+  .btn-primary:hover{background:#00bbee;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-green{background:var(--accent3);color:#000;}
+  .btn-green:hover{filter:brightness(0.9);}
+  .btn-download{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.3);padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all 0.2s;display:inline-flex;align-items:center;gap:5px;}
+  .btn-download:hover{background:rgba(0,212,255,0.2);}
+  .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;cursor:pointer;}
+  .avatar-user{background:linear-gradient(135deg,var(--accent3),#00aa6a);}
+  .avatar-admin{background:linear-gradient(135deg,var(--danger),#cc0020);}
+
+  .page{display:none;padding:28px;animation:fadeIn 0.3s ease;}
+  .page.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+  .stat-card:hover{border-color:var(--accent);}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat-card.cyan::before{background:var(--accent);}
+  .stat-card.green::before{background:var(--accent3);}
+  .stat-card.warn::before{background:var(--warn);}
+  .stat-card.red::before{background:var(--danger);}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);}
+  .stat-value{font-size:32px;font-weight:700;font-family:var(--mono);color:var(--text-bright);margin:6px 0 3px;}
+  .stat-delta{font-size:11px;}
+  .stat-delta.up{color:var(--accent3);}
+  .stat-delta.down{color:var(--danger);}
+  .stat-icon{position:absolute;right:16px;top:16px;font-size:24px;opacity:0.15;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color 0.2s;}
+  .card:hover{border-color:rgba(0,212,255,0.3);}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .section-title{font-size:13px;font-weight:600;color:var(--text-bright);font-family:var(--mono);display:flex;align-items:center;gap:8px;}
+  .section-title::before{content:'//';color:var(--accent);}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;}
+  .badge-critical{background:rgba(255,71,87,0.15);color:var(--danger);border:1px solid rgba(255,71,87,0.3);}
+  .badge-high{background:rgba(255,179,71,0.15);color:var(--warn);border:1px solid rgba(255,179,71,0.3);}
+  .badge-medium{background:rgba(255,200,80,0.1);color:#ffd060;border:1px solid rgba(255,200,80,0.2);}
+  .badge-low{background:rgba(0,255,157,0.1);color:var(--accent3);border:1px solid rgba(0,255,157,0.2);}
+  .badge-secure{background:rgba(0,255,157,0.1);color:var(--accent3);border:1px solid rgba(0,255,157,0.2);}
+  .badge-warning{background:rgba(255,179,71,0.15);color:var(--warn);border:1px solid rgba(255,179,71,0.3);}
+  .badge-info{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
+  .badge-open{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2);}
+  .badge-normal{background:rgba(0,255,157,0.1);color:var(--accent3);border:1px solid rgba(0,255,157,0.2);}
+  .badge-abnormal{background:rgba(255,71,87,0.15);color:var(--danger);border:1px solid rgba(255,71,87,0.3);}
+  .badge-positive{background:rgba(255,71,87,0.15);color:var(--danger);border:1px solid rgba(255,71,87,0.3);}
+  .badge-negative{background:rgba(0,255,157,0.1);color:var(--accent3);border:1px solid rgba(0,255,157,0.2);}
+
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:10px 12px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border);}
+  td{padding:11px 12px;border-bottom:1px solid rgba(30,45,71,0.5);}
+  tr:hover td{background:rgba(0,212,255,0.03);}
+  tr:last-child td{border-bottom:none;}
+
+  .alert-item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid rgba(30,45,71,0.5);animation:slideIn 0.4s ease;}
+  .alert-item:last-child{border-bottom:none;}
+  .alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+  .alert-dot.critical{background:var(--danger);box-shadow:0 0 6px var(--danger);}
+  .alert-dot.warning{background:var(--warn);}
+  .alert-dot.info{background:var(--accent);}
+  .alert-msg{font-size:13px;}
+  .alert-time{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+
+  .live-feed{display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto;}
+  .feed-item{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(30,45,71,0.4);animation:slideIn 0.4s ease;transition:background 0.2s;}
+  .feed-item:hover{background:rgba(255,255,255,0.02);}
+  .feed-item:first-child{background:rgba(255,71,87,0.04);}
+  .feed-icon{font-size:16px;flex-shrink:0;}
+  .feed-body{flex:1;}
+  .feed-title{font-size:13px;color:var(--text-bright);font-weight:500;}
+  .feed-detail{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+  .feed-time{font-size:10px;color:var(--muted);font-family:var(--mono);flex-shrink:0;}
+
+  .live-alert-popup{position:fixed;top:60px;right:20px;z-index:900;background:rgba(10,14,26,0.97);border:2px solid var(--danger);border-radius:14px;padding:16px 20px;min-width:320px;max-width:400px;box-shadow:0 0 30px rgba(255,71,87,0.4),0 8px 32px rgba(0,0,0,0.7);animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);display:flex;gap:14px;align-items:flex-start;}
+  .live-alert-popup.warn-popup{border-color:var(--warn);box-shadow:0 0 30px rgba(255,179,71,0.4),0 8px 32px rgba(0,0,0,0.7);}
+  .live-alert-popup .pop-icon{font-size:28px;flex-shrink:0;margin-top:2px;}
+  .live-alert-popup .pop-body{flex:1;}
+  .live-alert-popup .pop-title{font-size:14px;font-weight:700;color:var(--danger);font-family:var(--mono);margin-bottom:4px;}
+  .live-alert-popup.warn-popup .pop-title{color:var(--warn);}
+  .live-alert-popup .pop-detail{font-size:12px;color:var(--text);line-height:1.5;}
+  .live-alert-popup .pop-time{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:6px;}
+  .live-alert-popup .pop-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:0;}
+  .live-alert-popup .pop-close:hover{color:var(--text-bright);}
+  @keyframes popIn{from{opacity:0;transform:translateX(30px) scale(0.9)}to{opacity:1;transform:translateX(0) scale(1)}}
+  @keyframes popOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(30px)}}
+  .live-alert-stack{position:fixed;top:60px;right:20px;z-index:900;display:flex;flex-direction:column;gap:10px;}
+  .toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;min-width:280px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:slideIn 0.3s ease;}
+  .toast.success{border-left:3px solid var(--accent3);}
+  .toast.error{border-left:3px solid var(--danger);}
+  .toast.info{border-left:3px solid var(--accent);}
+  .toast.warn{border-left:3px solid var(--warn);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:580px;max-height:88vh;overflow-y:auto;position:relative;}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+  .modal-close:hover{color:var(--text-bright);}
+
+  .detail-field{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(30,45,71,0.5);align-items:flex-start;}
+  .detail-field:last-child{border-bottom:none;}
+  .detail-key{font-size:11px;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px;width:130px;flex-shrink:0;padding-top:2px;}
+  .detail-val{font-size:13px;color:var(--text-bright);flex:1;}
+
+  .form-group{margin-bottom:14px;}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:var(--mono);margin-bottom:5px;}
+  input,select,textarea{width:100%;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:13px;transition:border-color 0.2s;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical;min-height:70px;}
+
+  .user-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all 0.2s;cursor:pointer;}
+  .user-card:hover{border-color:var(--accent3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,255,157,0.06);}
+  .user-card-icon{font-size:32px;margin-bottom:10px;}
+  .user-card-title{font-size:14px;font-weight:600;color:var(--text-bright);margin-bottom:4px;}
+  .user-card-sub{font-size:12px;color:var(--muted);}
+  .module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+
+  .progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .progress-fill{height:100%;border-radius:3px;transition:width 0.8s ease;}
+  .fill-cyan{background:var(--accent);}.fill-green{background:var(--accent3);}
+  .fill-warn{background:var(--warn);}.fill-red{background:var(--danger);}
+
+  .pin-dots{display:flex;justify-content:center;gap:12px;margin:20px 0;}
+  .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all 0.2s;}
+  .pin-dot.filled{background:var(--accent);border-color:var(--accent);}
+  .pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto;}
+  .pin-key{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:18px;font-weight:700;font-family:var(--mono);color:var(--text-bright);cursor:pointer;transition:all 0.15s;text-align:center;}
+  .pin-key:hover{background:var(--border);color:var(--accent);}
+  .pin-key:active{transform:scale(0.94);}
+
+  .heatmap{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;}
+  .heat-cell{aspect-ratio:1;border-radius:4px;cursor:pointer;transition:transform 0.2s;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--mono);color:rgba(255,255,255,0.5);}
+  .heat-cell:hover{transform:scale(1.15);}
+  .heat-0{background:rgba(0,212,255,0.07);}.heat-1{background:rgba(0,255,157,0.2);}
+  .heat-2{background:rgba(255,179,71,0.25);}.heat-3{background:rgba(255,71,87,0.35);}.heat-4{background:rgba(255,71,87,0.6);}
+
+  .bar-chart{display:flex;align-items:flex-end;gap:8px;height:110px;padding:0 4px;}
+  .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;}
+  .bar{width:100%;border-radius:4px 4px 0 0;transition:height 0.8s ease;cursor:pointer;min-height:4px;}
+  .bar-label{font-size:10px;color:var(--muted);font-family:var(--mono);}
+  .bar:hover{filter:brightness(1.3);}
+
+  .compliance-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(30,45,71,0.5);}
+  .compliance-item:last-child{border-bottom:none;}
+  .compliance-check{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+  .check-done{background:rgba(0,255,157,0.15);color:var(--accent3);border:1px solid rgba(0,255,157,0.3);}
+  .check-partial{background:rgba(255,179,71,0.15);color:var(--warn);border:1px solid rgba(255,179,71,0.3);}
+  .check-no{background:rgba(255,71,87,0.1);color:var(--danger);border:1px solid rgba(255,71,87,0.2);}
+  .compliance-name{font-size:13px;flex:1;}
+  .compliance-status{font-size:11px;font-family:var(--mono);}
+
+  .score-ring-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;padding:16px;}
+  .score-ring{position:relative;width:130px;height:130px;}
+  .score-ring svg{transform:rotate(-90deg);}
+  .score-ring .score-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);font-size:28px;font-weight:700;color:var(--text-bright);}
+  .score-ring .score-lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+
+  .log-terminal{background:#060a12;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;min-height:180px;max-height:280px;overflow-y:auto;}
+  .log-line{padding:2px 0;}
+  .log-line.normal{color:#4a6080;}.log-line.warn{color:var(--warn);}
+  .log-line.anomaly{color:var(--danger);}.log-line.info{color:var(--accent);}
+
+  .drop-zone{border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(0,212,255,0.04);}
+
+  .text-muted{color:var(--muted);}.text-bright{color:var(--text-bright);}
+  .text-accent{color:var(--accent);}.text-green{color:var(--accent3);}
+  .text-warn{color:var(--warn);}.text-red{color:var(--danger);}
+  .mono{font-family:var(--mono);}
+  .mt8{margin-top:8px;}.mt12{margin-top:12px;}.mt16{margin-top:16px;}.mt20{margin-top:20px;}
+  .mb8{margin-bottom:8px;}.mb12{margin-bottom:12px;}.mb16{margin-bottom:16px;}
+  .flex{display:flex;}.flex-center{display:flex;align-items:center;}
+  .between{justify-content:space-between;}.gap8{gap:8px;}.gap12{gap:12px;}
+  .w100{width:100%;}
+
+  @media(max-width:900px){
+    .sidebar{transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}
+    .main{margin-left:0;}.grid-2,.grid-3{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- USER LOGIN -->
+<div class="login-screen" id="user-login-screen">
+  <div class="login-bg"><div class="grid-lines"></div></div>
+  <div class="login-box">
+    <div class="login-logo login-logo-user">
+      <div class="login-logo-icon">H+</div>
+      <h1>HealthShield</h1>
+      <p>Patient Portal</p>
+      <div class="login-role-badge badge-user-role">User Login</div>
+    </div>
+    <div class="login-error" id="user-login-error">⚠ Incorrect username or password. Please try again.</div>
+    <div class="login-form-group">
+      <label>Username / Patient ID</label>
+      <input type="text" id="user-login-id" placeholder="Enter your username" autocomplete="off">
+    </div>
+    <div class="login-form-group">
+      <label>Password</label>
+      <input type="password" id="user-login-pass" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doUserLogin()">
+    </div>
+    <button class="login-btn login-btn-user" onclick="doUserLogin()">Login to Portal →</button>
+    <div class="login-hint">Demo credentials: user / user123</div>
+    <div class="login-switch">Are you an admin? <a onclick="showLogin('admin')">Admin Login →</a></div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div class="login-screen hidden" id="admin-login-screen">
+  <div class="login-bg"><div class="grid-lines"></div></div>
+  <div class="login-box">
+    <div class="login-logo login-logo-admin">
+      <div class="login-logo-icon">⚔</div>
+      <h1>HealthShield Admin</h1>
+      <p>Security Operations Center</p>
+      <div class="login-role-badge badge-admin-role">Admin Login</div>
+    </div>
+    <div class="login-error" id="admin-login-error">⚠ Incorrect admin credentials. Access denied.</div>
+    <div class="login-form-group admin-input">
+      <label>Admin ID</label>
+      <input type="text" id="admin-login-id" placeholder="Enter admin ID" autocomplete="off">
+    </div>
+    <div class="login-form-group admin-input">
+      <label>Password</label>
+      <input type="password" id="admin-login-pass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <button class="login-btn login-btn-admin" onclick="doAdminLogin()">Login as Admin →</button>
+    <div class="login-hint">Demo credentials: admin / admin123</div>
+    <div class="login-switch">Not an admin? <a onclick="showLogin('user')">User Login →</a></div>
+  </div>
+</div>
+
+<!-- INTERFACE SWITCHER -->
+<div class="interface-switcher" id="switcher" style="display:none">
+  <span>INTERFACE:</span>
+  <button class="sw-btn active-user" id="btn-user" onclick="requireReloginSwitch('user')">👤 User Portal</button>
+  <button class="sw-btn" id="btn-admin" onclick="requireReloginSwitch('admin')">🛡 Admin Security</button>
+  <div class="live-badge"><div class="live-dot"></div> LIVE MONITORING</div>
+</div>
+
+<!-- USER INTERFACE -->
+<div id="user-interface" class="app-wrap" style="display:none">
+  <aside class="sidebar logo-user" id="user-sidebar">
+    <div class="sidebar-logo logo-user">
+      <div class="logo-icon">H+</div>
+      <h2>HealthShield</h2>
+      <p>Patient Portal</p>
+    </div>
+    <nav>
+      <div class="nav-section">My Services</div>
+      <div class="nav-item active" onclick="userNav('home')"><span class="icon">🏠</span> Home</div>
+      <div class="nav-item" onclick="userNav('patient-details')"><span class="icon">👤</span> Patient Details</div>
+      <div class="nav-item" onclick="userNav('medical-reports')"><span class="icon">🩺</span> Medical Report</div>
+      <div class="nav-item" onclick="userNav('lab')"><span class="icon">🔬</span> Lab</div>
+      <div class="nav-item" onclick="userNav('billing')"><span class="icon">💳</span> Billing</div>
+      <div class="nav-item" onclick="userNav('pharmacy')"><span class="icon">💊</span> Pharmacy</div>
+      <div class="nav-item" onclick="userNav('appointments')"><span class="icon">📅</span> Appointment</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item" onclick="userNav('profile')"><span class="icon">⚙</span> My Profile</div>
+      <div class="nav-item" onclick="logoutUser()"><span class="icon">🚪</span> Logout</div>
+    </nav>
+    <div class="sidebar-footer"><span class="online-dot"></span>Logged in: <span id="user-display-name" style="color:var(--accent3)">Priya Sharma</span><br><span style="font-size:10px;color:var(--muted)">Session active</span></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="flex-center gap8">
+        <div><div class="page-title" id="user-page-title">Patient Home</div><div class="breadcrumb" id="user-breadcrumb">HealthShield / Home</div></div>
+      </div>
+      <div class="topbar-right">
+        <div class="avatar avatar-user" title="Patient User">P</div>
+      </div>
+    </div>
+
+    <!-- HOME -->
+    <div class="page active" id="upage-home">
+      <div style="margin-bottom:20px">
+        <div style="font-size:18px;font-weight:700;color:var(--text-bright);margin-bottom:4px">Welcome back, Priya 👋</div>
+        <div style="font-size:13px;color:var(--muted)">Your health portal — access records, reports, appointments and hospital services.</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cyan"><div class="stat-icon">👤</div><div class="stat-label">Patient ID</div><div class="stat-value" style="font-size:18px;margin-top:8px">MRN-00234</div><div class="stat-delta up">Active Patient</div></div>
+        <div class="stat-card green"><div class="stat-icon">📅</div><div class="stat-label">Appointments</div><div class="stat-value">2</div><div class="stat-delta up">Next: Apr 15</div></div>
+        <div class="stat-card warn"><div class="stat-icon">💊</div><div class="stat-label">Prescriptions</div><div class="stat-value">3</div><div class="stat-delta">2 due for refill</div></div>
+        <div class="stat-card red"><div class="stat-icon">🩺</div><div class="stat-label">Medical Reports</div><div class="stat-value">5</div><div class="stat-delta up">1 new result</div></div>
+      </div>
+      <div class="module-grid">
+        <div class="user-card" onclick="userNav('patient-details')"><div class="user-card-icon">👤</div><div class="user-card-title">Patient Details</div><div class="user-card-sub">View your complete patient profile</div></div>
+        <div class="user-card" onclick="userNav('medical-reports')"><div class="user-card-icon">🩺</div><div class="user-card-title">Medical Report</div><div class="user-card-sub">Blood tests, scans & clinical results</div></div>
+        <div class="user-card" onclick="userNav('lab')"><div class="user-card-icon">🔬</div><div class="user-card-title">Lab</div><div class="user-card-sub">Laboratory test results & history</div></div>
+        <div class="user-card" onclick="userNav('billing')"><div class="user-card-icon">💳</div><div class="user-card-title">Billing</div><div class="user-card-sub">Bills, invoices & payment details</div></div>
+        <div class="user-card" onclick="userNav('pharmacy')"><div class="user-card-icon">💊</div><div class="user-card-title">Pharmacy</div><div class="user-card-sub">Prescriptions & medicine details</div></div>
+        <div class="user-card" onclick="userNav('appointments')"><div class="user-card-icon">📅</div><div class="user-card-title">Appointment</div><div class="user-card-sub">Doctor appointments & bookings</div></div>
+      </div>
+    </div>
+
+    <!-- PATIENT DETAILS -->
+    <div class="page" id="upage-patient-details">
+      <div class="section-header">
+        <div class="section-title">Patient Details</div>
+        <button class="btn-download" onclick="triggerDownload('patient-details','Patient Details — Priya Sharma')">⬇ Download PDF</button>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent3),#00aa6a);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#000;margin:0 auto 10px;font-family:var(--mono)">P</div>
+            <div style="font-size:16px;font-weight:700;color:var(--text-bright)">Priya Sharma</div>
+            <div style="font-size:12px;color:var(--muted)">RM No.: MRN-00234</div>
+          </div>
+          <div class="detail-field"><div class="detail-key">Name</div><div class="detail-val">Priya Sharma</div></div>
+          <div class="detail-field"><div class="detail-key">RM No.</div><div class="detail-val mono text-accent">MRN-00234</div></div>
+          <div class="detail-field"><div class="detail-key">Mobile</div><div class="detail-val">+91 93650 83378</div></div>
+          <div class="detail-field"><div class="detail-key">Email</div><div class="detail-val">majumderroyal@gmail.com</div></div>
+          <div class="detail-field"><div class="detail-key">Address</div><div class="detail-val">Bangalore</div></div>
+          <div class="detail-field"><div class="detail-key">Date of Birth</div><div class="detail-val">14 August 1992</div></div>
+          <div class="detail-field"><div class="detail-key">Blood Group</div><div class="detail-val"><span class="badge badge-critical">B+</span></div></div>
+          <div class="detail-field"><div class="detail-key">Gender</div><div class="detail-val">Female</div></div>
+        </div>
+        <div class="card">
+          <div class="section-title mb16">Medical Details</div>
+          <div class="detail-field"><div class="detail-key">Ward / Dept</div><div class="detail-val">OPD</div></div>
+          <div class="detail-field"><div class="detail-key">Assigned Doctor</div><div class="detail-val">Dr. Mehta</div></div>
+          <div class="detail-field"><div class="detail-key">Status</div><div class="detail-val"><span class="badge badge-info">Active</span></div></div>
+          <div class="detail-field"><div class="detail-key">Admission Date</div><div class="detail-val mono">2024-01-15</div></div>
+          <div class="section-title mt16 mb16">Emergency Contact</div>
+          <div class="detail-field"><div class="detail-key">Name</div><div class="detail-val">Rajesh Sharma</div></div>
+          <div class="detail-field"><div class="detail-key">Relation</div><div class="detail-val">Spouse</div></div>
+          <div class="detail-field"><div class="detail-key">Mobile</div><div class="detail-val">+91 91234 56789</div></div>
+          <div class="section-title mt16 mb16">Insurance</div>
+          <div class="detail-field"><div class="detail-key">Provider</div><div class="detail-val">Star Health Insurance</div></div>
+          <div class="detail-field"><div class="detail-key">Policy No.</div><div class="detail-val mono">SHI-2024-00891</div></div>
+          <div class="detail-field"><div class="detail-key">Valid Until</div><div class="detail-val">31 Dec 2026</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDICAL REPORT -->
+    <div class="page" id="upage-medical-reports">
+      <div class="section-header">
+        <div class="section-title">Medical Report</div>
+        <button class="btn-download" onclick="triggerDownload('medical-reports','Medical Reports — Priya Sharma')">⬇ Download All</button>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card green"><div class="stat-label">Blood Group</div><div class="stat-value" style="font-size:22px">B+</div></div>
+        <div class="stat-card cyan"><div class="stat-label">Total Tests</div><div class="stat-value">5</div></div>
+        <div class="stat-card warn"><div class="stat-label">Abnormal</div><div class="stat-value" style="color:var(--warn)">2</div></div>
+        <div class="stat-card"><div class="stat-label">Normal</div><div class="stat-value" style="color:var(--accent3)">3</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title mb16">Blood Test & Clinical Reports</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>Patient ID</th><th>Mobile</th><th>Test Name</th><th>Blood Group</th><th>Test Result</th><th>Date</th><th>Doctor</th><th>Download</th></tr></thead>
+            <tbody>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td>Complete Blood Count (CBC)</td><td><span class="badge badge-critical">B+</span></td><td><span class="badge badge-normal">Normal</span></td><td class="mono" style="font-size:12px">2024-03-10</td><td>Dr. Sharma</td><td><button class="btn-download" onclick="triggerDownload('blood-cbc','CBC Report — MRN-00234')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td>Lipid Profile</td><td><span class="badge badge-critical">B+</span></td><td><span class="badge badge-abnormal">Abnormal</span></td><td class="mono" style="font-size:12px">2024-02-20</td><td>Dr. Mehta</td><td><button class="btn-download" onclick="triggerDownload('lipid-profile','Lipid Profile — MRN-00234')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td>Blood Sugar (Fasting)</td><td><span class="badge badge-critical">B+</span></td><td><span class="badge badge-normal">Normal</span></td><td class="mono" style="font-size:12px">2024-03-10</td><td>Dr. Sharma</td><td><button class="btn-download" onclick="triggerDownload('blood-sugar','Blood Sugar — MRN-00234')">⬇ PDF</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card mt16">
+        <div class="section-header"><div class="section-title">Full Blood Test Details — MRN-00234</div></div>
+        <div class="grid-2">
+          <div>
+            <div class="detail-field"><div class="detail-key">Patient Name</div><div class="detail-val">Priya Sharma</div></div>
+            <div class="detail-field"><div class="detail-key">Patient ID</div><div class="detail-val mono text-accent">MRN-00234</div></div>
+            <div class="detail-field"><div class="detail-key">Mobile</div><div class="detail-val">+91 93650 83378</div></div>
+            <div class="detail-field"><div class="detail-key">Blood Group</div><div class="detail-val"><span class="badge badge-critical">B+</span></div></div>
+          </div>
+          <div>
+            <div class="detail-field"><div class="detail-key">Haemoglobin</div><div class="detail-val">12.8 g/dL <span class="badge badge-normal" style="font-size:10px">Normal</span></div></div>
+            <div class="detail-field"><div class="detail-key">WBC Count</div><div class="detail-val">7,200 /µL <span class="badge badge-normal" style="font-size:10px">Normal</span></div></div>
+            <div class="detail-field"><div class="detail-key">Platelet Count</div><div class="detail-val">2.1 Lakh/µL <span class="badge badge-normal" style="font-size:10px">Normal</span></div></div>
+            <div class="detail-field"><div class="detail-key">Cholesterol</div><div class="detail-val">218 mg/dL <span class="badge badge-abnormal" style="font-size:10px">High</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAB -->
+    <div class="page" id="upage-lab">
+      <div class="section-header">
+        <div class="section-title">Lab</div>
+        <button class="btn-download" onclick="triggerDownload('lab-reports','Lab Reports — Priya Sharma')">⬇ Download All</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cyan"><div class="stat-label">Total Lab Tests</div><div class="stat-value">8</div><div class="stat-delta up">This year</div></div>
+        <div class="stat-card green"><div class="stat-label">Completed</div><div class="stat-value">7</div><div class="stat-delta up">Results ready</div></div>
+        <div class="stat-card warn"><div class="stat-label">Pending</div><div class="stat-value">1</div><div class="stat-delta">Processing</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title mb16">Lab Test Results</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>RM No.</th><th>Mobile</th><th>Email</th><th>Test Name</th><th>Lab ID</th><th>Result</th><th>Date</th><th>Technician</th><th>Download</th></tr></thead>
+            <tbody>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td style="font-size:12px">majumderroyal@gmail.com</td><td>Complete Blood Count</td><td class="mono" style="font-size:11px">LAB-2024-001</td><td><span class="badge badge-normal">Normal</span></td><td class="mono" style="font-size:12px">2024-03-10</td><td>Ramesh Kumar</td><td><button class="btn-download" onclick="triggerDownload('lab-cbc','Lab CBC — MRN-00234')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td style="font-size:12px">majumderroyal@gmail.com</td><td>Urine Routine</td><td class="mono" style="font-size:11px">LAB-2024-002</td><td><span class="badge badge-normal">Normal</span></td><td class="mono" style="font-size:12px">2024-03-10</td><td>Priti Das</td><td><button class="btn-download" onclick="triggerDownload('lab-urine','Urine Routine — MRN-00234')">⬇ PDF</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div class="page" id="upage-billing">
+      <div class="section-header">
+        <div class="section-title">Billing</div>
+        <button class="btn-download" onclick="triggerDownload('billing-records','Billing Records — Priya Sharma')">⬇ Download All</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card red"><div class="stat-label">Total Bill</div><div class="stat-value" style="font-size:22px">₹42,500</div><div class="stat-delta down">Outstanding</div></div>
+        <div class="stat-card green"><div class="stat-label">Amount Paid</div><div class="stat-value" style="font-size:22px">₹28,000</div><div class="stat-delta up">Verified</div></div>
+        <div class="stat-card warn"><div class="stat-label">Balance Due</div><div class="stat-value" style="font-size:22px">₹14,500</div><div class="stat-delta">Due: Apr 30</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title mb16">Billing Records</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>RM No.</th><th>Invoice No.</th><th>Total Amount</th><th>Medicines / Services</th><th>Date</th><th>Status</th><th>Download</th></tr></thead>
+            <tbody>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td class="mono" style="font-size:12px">INV-2024-0891</td><td style="font-weight:600;color:var(--text-bright)">₹18,500</td><td style="font-size:12px;color:var(--muted)">Amoxicillin 500mg, CBC Test, Consultation</td><td class="mono" style="font-size:12px">2024-03-10</td><td><span class="badge badge-secure">Paid</span></td><td><button class="btn-download" onclick="triggerDownload('bill-inv891','Invoice INV-2024-0891')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td class="mono" style="font-size:12px">INV-2024-0945</td><td style="font-weight:600;color:var(--text-bright)">₹9,500</td><td style="font-size:12px;color:var(--muted)">Atorvastatin 20mg, Lipid Profile, ECG</td><td class="mono" style="font-size:12px">2024-02-20</td><td><span class="badge badge-secure">Paid</span></td><td><button class="btn-download" onclick="triggerDownload('bill-inv945','Invoice INV-2024-0945')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td class="mono" style="font-size:12px">INV-2024-1102</td><td style="font-weight:600;color:var(--danger)">₹14,500</td><td style="font-size:12px;color:var(--muted)">MRI Scan, Metformin 500mg, Specialist Consult</td><td class="mono" style="font-size:12px">2024-03-15</td><td><span class="badge badge-warning">Pending</span></td><td><button class="btn-download" onclick="triggerDownload('bill-inv1102','Invoice INV-2024-1102')">⬇ PDF</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHARMACY -->
+    <div class="page" id="upage-pharmacy">
+      <div class="section-header">
+        <div class="section-title">Pharmacy</div>
+        <button class="btn-download" onclick="triggerDownload('pharmacy-records','Pharmacy Records — Priya Sharma')">⬇ Download All</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cyan"><div class="stat-label">Active Prescriptions</div><div class="stat-value">3</div><div class="stat-delta up">Current</div></div>
+        <div class="stat-card warn"><div class="stat-label">Due for Refill</div><div class="stat-value">2</div><div class="stat-delta down">This week</div></div>
+        <div class="stat-card green"><div class="stat-label">Dispensed Today</div><div class="stat-value">1</div><div class="stat-delta up">Collected</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title mb16">Prescription & Medicine Details</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>RM No.</th><th>Mobile</th><th>Email</th><th>Medicine Name</th><th>Dosage</th><th>Frequency</th><th>Prescribed By</th><th>Quantity</th><th>Price</th><th>Status</th><th>Download</th></tr></thead>
+            <tbody>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td style="font-size:12px">majumderroyal@gmail.com</td><td>Amoxicillin</td><td>500mg</td><td>3× daily / 7 days</td><td>Dr. Sharma</td><td>21 tabs</td><td>₹180</td><td><span class="badge badge-secure">Active</span></td><td><button class="btn-download" onclick="triggerDownload('rx-amox','Prescription — Amoxicillin')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td style="font-size:12px">majumderroyal@gmail.com</td><td>Atorvastatin</td><td>20mg</td><td>1× daily / 30 days</td><td>Dr. Mehta</td><td>30 tabs</td><td>₹420</td><td><span class="badge badge-warning">Refill Due</span></td><td><button class="btn-download" onclick="triggerDownload('rx-ator','Prescription — Atorvastatin')">⬇ PDF</button></td></tr>
+              <tr><td>Priya Sharma</td><td class="mono text-accent" style="font-size:12px">MRN-00234</td><td style="font-size:12px">+91 93650 83378</td><td style="font-size:12px">majumderroyal@gmail.com</td><td>Metformin</td><td>500mg</td><td>2× daily / 90 days</td><td>Dr. Agarwal</td><td>180 tabs</td><td>₹540</td><td><span class="badge badge-warning">Refill Due</span></td><td><button class="btn-download" onclick="triggerDownload('rx-metf','Prescription — Metformin')">⬇ PDF</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card mt16">
+        <div class="section-title mb16">Pharmacy Locations</div>
+        <div class="grid-3">
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:15px;font-weight:600;color:var(--text-bright);margin-bottom:8px">💊 Central Pharmacy</div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Mobile</div><div class="detail-val" style="font-size:12px">+91-11-4567-8901</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Location</div><div class="detail-val" style="font-size:12px">Ground Floor, Block A</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Hours</div><div class="detail-val" style="font-size:12px">24/7</div></div>
+            <span class="badge badge-secure mt8" style="display:inline-block">Open</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:15px;font-weight:600;color:var(--text-bright);margin-bottom:8px">🚨 Emergency Pharmacy</div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Mobile</div><div class="detail-val" style="font-size:12px">+91-11-4567-8902</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Location</div><div class="detail-val" style="font-size:12px">Emergency Wing, GF</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Hours</div><div class="detail-val" style="font-size:12px">24/7 Emergency</div></div>
+            <span class="badge badge-secure mt8" style="display:inline-block">Open</span>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px">
+            <div style="font-size:15px;font-weight:600;color:var(--text-bright);margin-bottom:8px">🏥 OPD Pharmacy</div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Mobile</div><div class="detail-val" style="font-size:12px">+91-11-4567-8903</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Location</div><div class="detail-val" style="font-size:12px">OPD Block, Level 1</div></div>
+            <div class="detail-field" style="padding:5px 0"><div class="detail-key" style="width:80px">Hours</div><div class="detail-val" style="font-size:12px">Mon–Sat 8AM–8PM</div></div>
+            <span class="badge badge-secure mt8" style="display:inline-block">Open</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPOINTMENT -->
+    <div class="page" id="upage-appointments">
+      <div class="section-header">
+        <div class="section-title">Appointment</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-green btn-sm" onclick="openModal('add-appt-modal')">+ Add Appointment</button>
+          <button class="btn-download" onclick="triggerDownload('appointments','Appointment Records')">⬇ Download</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cyan"><div class="stat-label">Total Appointments</div><div class="stat-value">6</div></div>
+        <div class="stat-card green"><div class="stat-label">Upcoming</div><div class="stat-value">2</div><div class="stat-delta up">This month</div></div>
+        <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value">4</div><div class="stat-delta up">Past</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title mb16">Doctor Appointments</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>RM No.</th><th>Doctor</th><th>Department</th><th>Date</th><th>Time</th><th>Type</th><th>Status</th><th>Notes</th><th>Download</th></tr></thead>
+            <tbody id="appt-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="page" id="upage-profile">
+      <div class="section-header"><div class="section-title">My Profile</div><button class="btn-sm btn-primary">✎ Edit Profile</button></div>
+      <div class="grid-2">
+        <div class="card">
+          <div style="text-align:center;margin-bottom:16px">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent3),#00aa6a);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#000;margin:0 auto 10px;font-family:var(--mono)">M</div>
+            <div style="font-size:16px;font-weight:700;color:var(--text-bright)">Majumder Royal</div>
+            <div style="font-size:12px;color:var(--muted)">RM No.: MRN-00234</div>
+          </div>
+          <div class="detail-field"><div class="detail-key">Full Name</div><div class="detail-val">Majumder Royal</div></div>
+          <div class="detail-field"><div class="detail-key">Mobile</div><div class="detail-val">+91 93650 83378</div></div>
+          <div class="detail-field"><div class="detail-key">Email</div><div class="detail-val">majumderroyal@gmail.com</div></div>
+          <div class="detail-field"><div class="detail-key">Address</div><div class="detail-val">Bangalore</div></div>
+        </div>
+        <div class="card">
+          <div class="section-title mb16">Account Security</div>
+          <div class="detail-field"><div class="detail-key">Username</div><div class="detail-val mono">user</div></div>
+          <div class="detail-field"><div class="detail-key">Last Login</div><div class="detail-val mono">Today, just now</div></div>
+          <div class="detail-field"><div class="detail-key">Download PIN</div><div class="detail-val"><span class="badge badge-info">••••</span> (default: 1234)</div></div>
+          <div class="section-title mt16 mb16">Insurance</div>
+          <div class="detail-field"><div class="detail-key">Provider</div><div class="detail-val">Star Health Insurance</div></div>
+          <div class="detail-field"><div class="detail-key">Policy No.</div><div class="detail-val mono">SHI-2024-00891</div></div>
+          <div class="detail-field"><div class="detail-key">Valid Until</div><div class="detail-val">31 Dec 2026</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN INTERFACE -->
+<div id="admin-interface" class="app-wrap" style="display:none">
+  <aside class="sidebar admin-nav" id="admin-sidebar">
+    <div class="sidebar-logo logo-admin">
+      <div class="logo-icon">⚔</div>
+      <h2>HealthShield Admin</h2>
+      <p>Security Operations Center</p>
+    </div>
+    <nav>
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="adminNav('dashboard')"><span class="icon">⬡</span> Dashboard</div>
+      <div class="nav-section">Security</div>
+      <div class="nav-item" onclick="adminNav('live-alerts')"><span class="icon">🚨</span> Live Alerts<span class="nav-badge" id="alerts-badge">0</span></div>
+      <div class="nav-item" onclick="adminNav('assets')"><span class="icon">🖥</span> Asset Monitoring</div>
+      <div class="nav-item" onclick="adminNav('vulnerabilities')"><span class="icon">⚠</span> Vulnerabilities<span class="nav-badge" id="vuln-badge">4</span></div>
+      <div class="nav-item" onclick="adminNav('phi')"><span class="icon">🔒</span> PHI Risk Monitor</div>
+      <div class="nav-item" onclick="adminNav('compliance')"><span class="icon">✓</span> Compliance</div>
+      <div class="nav-item" onclick="adminNav('ai-log')"><span class="icon">🤖</span> AI Log Anomaly</div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item" onclick="logoutAdmin()"><span class="icon">🚪</span> Logout</div>
+    </nav>
+    <div class="sidebar-footer"><span class="online-dot"></span>Monitoring Active<br><span style="font-size:10px;color:var(--muted)">Last sync: just now</span></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="flex-center gap8">
+        <div><div class="page-title" id="admin-page-title">Security Dashboard</div><div class="breadcrumb" id="admin-breadcrumb">HealthShield / Admin / Overview</div></div>
+      </div>
+      <div class="topbar-right">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--danger);font-family:var(--mono);background:rgba(255,71,87,0.08);padding:5px 12px;border-radius:20px;border:1px solid rgba(255,71,87,0.2)">
+          <div class="live-dot"></div> LIVE MONITOR
+        </div>
+        <div class="avatar avatar-admin" title="Admin">A</div>
+      </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div class="page active" id="apage-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card cyan"><div class="stat-icon">🖥</div><div class="stat-label">Assets Monitored</div><div class="stat-value" id="stat-assets">24</div><div class="stat-delta up">↑ 3 this week</div></div>
+        <div class="stat-card red"><div class="stat-icon">⚠</div><div class="stat-label">Total Vulnerabilities</div><div class="stat-value" id="stat-vulns">47</div><div class="stat-delta down">↑ 5 new today</div></div>
+        <div class="stat-card warn"><div class="stat-icon">🚨</div><div class="stat-label">Live Alerts</div><div class="stat-value" id="dash-alert-count">0</div><div class="stat-delta down">Active threats</div></div>
+        <div class="stat-card green"><div class="stat-icon">✓</div><div class="stat-label">Compliance</div><div class="stat-value">72<span style="font-size:16px">%</span></div><div class="stat-delta up">↑ 4% month</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-header"><div class="section-title">Recent Security Alerts</div><button class="btn-sm btn-ghost" style="font-size:11px" onclick="adminNav('live-alerts')">View All</button></div>
+          <div id="dash-alerts-list"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No alerts yet. Monitoring active.</div></div>
+        </div>
+        <div class="card">
+          <div class="section-header"><div class="section-title">Download Activity</div></div>
+          <div id="download-monitor-list"><div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">No download events yet.</div></div>
+        </div>
+      </div>
+      <div class="card mt16">
+        <div class="section-header"><div class="section-title">Risk Heatmap</div></div>
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+      <div class="card mt16">
+        <div class="section-header"><div class="section-title">Vulnerability Trend — Last 8 Weeks</div></div>
+        <div class="bar-chart" id="bar-chart"></div>
+      </div>
+    </div>
+
+    <!-- LIVE ALERTS PAGE -->
+    <div class="page" id="apage-live-alerts">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card red"><div class="stat-icon">🚨</div><div class="stat-label">Total Alerts</div><div class="stat-value" id="total-alerts-count">0</div><div class="stat-delta down">Since session start</div></div>
+        <div class="stat-card warn"><div class="stat-icon">🔑</div><div class="stat-label">Failed Logins</div><div class="stat-value" id="failed-logins-count">0</div><div class="stat-delta down">All attempts</div></div>
+        <div class="stat-card cyan"><div class="stat-icon">⬇</div><div class="stat-label">Excess Downloads</div><div class="stat-value" id="excess-dl-count">0</div><div class="stat-delta">Flagged</div></div>
+        <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-label">Suspicious Access</div><div class="stat-value" id="suspicious-count">0</div><div class="stat-delta down">Detected</div></div>
+      </div>
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title" style="color:var(--danger)">🚨 Live Security Alerts Feed</div>
+          <button class="btn-sm btn-ghost" style="font-size:10px" onclick="clearAlertFeed()">Clear Feed</button>
+        </div>
+        <div id="live-alert-feed" class="live-feed" style="max-height:500px">
+          <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">// Monitoring active. Alerts will appear here in real-time.</div>
+        </div>
+      </div>
+      <div class="grid-2 mt16">
+        <div class="card">
+          <div class="section-title mb16">Login Attempt Log</div>
+          <div id="login-attempt-log" class="live-feed"><div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No login attempts recorded yet.</div></div>
+        </div>
+        <div class="card">
+          <div class="section-title mb16">Download Activity Log</div>
+          <div id="download-activity-log" class="live-feed"><div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No download events recorded yet.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSETS -->
+    <div class="page" id="apage-assets">
+      <div class="section-header"><div class="section-title">Asset Inventory</div><button class="btn-sm btn-primary" onclick="openModal('add-asset-modal')">+ Add Asset</button></div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Asset Name</th><th>Type</th><th>IP Address</th><th>Classification</th><th>Status</th><th>Risk Score</th><th>Action</th></tr></thead>
+            <tbody id="asset-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VULNERABILITIES -->
+    <div class="page" id="apage-vulnerabilities">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card red"><div class="stat-label">Critical</div><div class="stat-value" style="font-size:26px;color:var(--danger)">4</div></div>
+        <div class="stat-card warn"><div class="stat-label">High</div><div class="stat-value" style="font-size:26px;color:var(--warn)">12</div></div>
+        <div class="stat-card"><div class="stat-label">Medium</div><div class="stat-value" style="font-size:26px;color:#ffd060">18</div></div>
+        <div class="stat-card green"><div class="stat-label">Low</div><div class="stat-value" style="font-size:26px;color:var(--accent3)">13</div></div>
+      </div>
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">Vulnerability Records</div>
+          <div class="flex gap8">
+            <select id="vuln-filter" style="width:auto;padding:6px 10px" onchange="renderVulns()"><option value="">All Severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select>
+            <button class="btn-sm btn-primary" onclick="openModal('add-vuln-modal')">+ Add Vuln</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>CVE ID</th><th>Asset</th><th>Description</th><th>CVSS</th><th>Severity</th><th>Status</th></tr></thead><tbody id="vuln-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PHI -->
+    <div class="page" id="apage-phi">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title mb16">PHI Keyword Detection</div>
+          <div class="form-group"><label>Paste Sample Text / Log</label><textarea id="phi-text" placeholder="e.g. Patient MRN-00234 has been diagnosed with... Aadhaar: 1234-5678-9012"></textarea></div>
+          <button class="btn-sm btn-primary w100" onclick="scanPHI()">🔍 Scan for PHI</button>
+          <div id="phi-result" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <div class="section-title mb16">File Exposure Scan</div>
+          <div id="file-scan-list"></div>
+          <button class="btn-sm btn-ghost w100 mt16" onclick="runFileScan()">↻ Re-scan Paths</button>
+        </div>
+      </div>
+      <div class="card mt16">
+        <div class="section-title mb16">PHI Risk Flags</div>
+        <div class="table-wrap"><table><thead><tr><th>File/Source</th><th>Detected Keywords</th><th>Risk Level</th><th>Flagged</th><th>Status</th></tr></thead><tbody id="phi-flags-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- COMPLIANCE -->
+    <div class="page" id="apage-compliance">
+      <div class="grid-2">
+        <div class="card"><div class="section-title mb16">HIPAA Compliance Controls</div><div id="compliance-list"></div></div>
+        <div class="card">
+          <div class="section-title mb16">Compliance Summary</div>
+          <div class="score-ring-wrap">
+            <div class="score-ring">
+              <svg width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="52" fill="none" stroke="var(--border)" stroke-width="9"/><circle cx="65" cy="65" r="52" fill="none" stroke="var(--accent3)" stroke-width="9" stroke-dasharray="326.7" stroke-dashoffset="91.5" stroke-linecap="round" id="compliance-arc"/></svg>
+              <div class="score-num" id="compliance-score-num">72<div class="score-lbl">% Pass</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI LOG -->
+    <div class="page" id="apage-ai-log">
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title mb16">Upload Server Log</div>
+          <div class="form-group"><label>Log File</label><input type="file" id="log-file" accept=".log,.txt" onchange="loadLogFile(this)"></div>
+          <button class="btn-sm btn-ghost w100" onclick="loadSampleLog()" style="margin-bottom:8px">Load Sample Log</button>
+          <button class="btn-sm btn-primary w100" onclick="analyzeLog()">🤖 Analyze for Anomalies</button>
+        </div>
+        <div class="card">
+          <div class="section-title mb16">Detection Statistics</div>
+          <div id="log-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:22px;font-family:var(--mono);color:var(--accent)" id="stat-total-lines">--</div><div style="font-size:11px;color:var(--muted)">Total Entries</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:22px;font-family:var(--mono);color:var(--danger)" id="stat-anomalies">--</div><div style="font-size:11px;color:var(--muted)">Anomalies</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:22px;font-family:var(--mono);color:var(--warn)" id="stat-failed">--</div><div style="font-size:11px;color:var(--muted)">Failed Logins</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px"><div style="font-size:22px;font-family:var(--mono);color:var(--accent3)" id="stat-unique-ips">--</div><div style="font-size:11px;color:var(--muted)">Unique IPs</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card mt16"><div class="section-title mb16">Log Terminal</div><div class="log-terminal" id="log-terminal"><div class="log-line info">// HealthShield AI Log Analyzer v2.0</div><div class="log-line normal">// Load a log file or use sample data to begin analysis</div></div></div>
+      <div class="card mt16" id="anomaly-alerts" style="display:none"><div class="section-title mb16">🚨 Detected Anomalies</div><div id="anomaly-list"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div class="modal-header" style="justify-content:center;flex-direction:column;gap:6px">
+      <h3 style="font-family:var(--mono);font-size:14px;color:var(--accent)">🔐 PIN Verification Required</h3>
+      <p style="font-size:12px;color:var(--muted)">Enter your 4-digit security PIN to download</p>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:var(--mono)" id="pin-doc-name">Document: —</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key" onclick="pinKey('clear')" style="font-size:13px;color:var(--warn)">CLR</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key" onclick="pinKey('del')" style="font-size:13px;color:var(--danger)">⌫</button>
+    </div>
+    <div id="pin-error" style="display:none;margin-top:12px;font-size:12px;color:var(--danger);font-family:var(--mono)">⚠ Incorrect PIN. Try again.</div>
+    <button class="btn-sm btn-ghost w100 mt16" onclick="closeModal('pin-modal');resetPin()">Cancel</button>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:10px">Default PIN: 1234</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-appt-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 style="font-family:var(--mono);font-size:14px;color:var(--text-bright)">// Add New Appointment</h3><button class="modal-close" onclick="closeModal('add-appt-modal')">✕</button></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Patient Name</label><input id="appt-patient" value="Priya Sharma"></div>
+      <div class="form-group"><label>RM No.</label><input id="appt-rm" value="MRN-00234"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Doctor</label><select id="appt-doctor"><option>Dr. Sharma</option><option>Dr. Mehta</option><option>Dr. Agarwal</option><option>Dr. Singh</option><option>Dr. Kapoor</option></select></div>
+      <div class="form-group"><label>Department</label><select id="appt-dept"><option>General Medicine</option><option>Cardiology</option><option>Radiology</option><option>Orthopaedics</option><option>Pathology</option><option>Neurology</option></select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Date</label><input id="appt-date" type="date"></div>
+      <div class="form-group"><label>Time</label><input id="appt-time" type="time" value="10:00"></div>
+    </div>
+    <div class="form-group"><label>Appointment Type</label><select id="appt-type"><option>Consultation</option><option>Follow-up</option><option>Routine Check</option><option>Emergency</option><option>Lab / Test</option><option>Surgery Pre-op</option></select></div>
+    <div class="form-group"><label>Notes</label><textarea id="appt-notes" placeholder="Any special instructions..."></textarea></div>
+    <button class="btn-sm btn-green w100" onclick="addAppointment()">Book Appointment</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-asset-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 style="font-family:var(--mono);font-size:14px;color:var(--text-bright)">// Add New Asset</h3><button class="modal-close" onclick="closeModal('add-asset-modal')">✕</button></div>
+    <div class="form-group"><label>Asset Name</label><input id="new-asset-name" placeholder="e.g. EMR-Server-04"></div>
+    <div class="form-group"><label>Asset Type</label><select id="new-asset-type"><option>Server</option><option>Database</option><option>Medical Device</option><option>Web Application</option><option>Network Device</option></select></div>
+    <div class="form-group"><label>IP Address</label><input id="new-asset-ip" placeholder="192.168.1.x"></div>
+    <div class="form-group"><label>Classification</label><select id="new-asset-class"><option>Low</option><option>Medium</option><option selected>High</option><option>Critical</option></select></div>
+    <div class="form-group"><label>Status</label><select id="new-asset-status"><option>Secure</option><option>Warning</option><option>Critical</option></select></div>
+    <button class="btn-sm btn-primary w100" onclick="addAsset()">Add Asset</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-vuln-modal">
+  <div class="modal">
+    <div class="modal-header"><h3 style="font-family:var(--mono);font-size:14px;color:var(--text-bright)">// Add Vulnerability</h3><button class="modal-close" onclick="closeModal('add-vuln-modal')">✕</button></div>
+    <div class="form-group"><label>CVE ID</label><input id="new-cve-id" placeholder="CVE-2024-XXXX"></div>
+    <div class="form-group"><label>Asset</label><select id="new-vuln-asset"></select></div>
+    <div class="form-group"><label>Description</label><input id="new-vuln-desc" placeholder="Brief description"></div>
+    <div class="form-group"><label>CVSS Score</label><input id="new-cvss" type="number" min="0" max="10" step="0.1" placeholder="7.5"></div>
+    <div class="form-group"><label>Status</label><select id="new-vuln-status"><option>Open</option><option>In Progress</option><option>Resolved</option></select></div>
+    <button class="btn-sm btn-primary w100" onclick="addVuln()">Add Vulnerability</button>
+  </div>
+</div>
+
+<div class="live-alert-stack" id="live-alert-stack"></div>
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const appState = {
+  currentInterface: null,
+  downloadCounts: {},
+  pinBuffer: '',
+  pendingDownload: null,
+  alertCount: 0,
+  failedLoginCount: 0,
+  excessDownloadCount: 0,
+  suspiciousCount: 0,
+  pendingPhiAlerts: [],
+  appointments: [
+    { id:1, patient:'Priya Sharma', rm:'MRN-00234', doctor:'Dr. Sharma', dept:'General Medicine', date:'2026-04-15', time:'10:30', type:'Follow-up', status:'Upcoming', notes:'Blood pressure check' },
+    { id:2, patient:'Priya Sharma', rm:'MRN-00234', doctor:'Dr. Agarwal', dept:'Cardiology', date:'2026-04-22', time:'14:00', type:'Routine', status:'Upcoming', notes:'Lipid follow-up' },
+    { id:3, patient:'Priya Sharma', rm:'MRN-00234', doctor:'Dr. Mehta', dept:'Radiology', date:'2026-03-28', time:'11:00', type:'X-Ray', status:'Completed', notes:'Chest X-Ray done' },
+  ],
+  assets: [
+    { id:1, name:'EMR-Server-01', type:'Server', ip:'10.0.1.10', classification:'Critical', status:'Warning', risk:45 },
+    { id:2, name:'Patient-DB-01', type:'Database', ip:'10.0.1.11', classification:'Critical', status:'Critical', risk:82 },
+    { id:3, name:'X-Ray-Device-02', type:'Medical Device', ip:'10.0.2.5', classification:'High', status:'Secure', risk:12 },
+    { id:4, name:'Pharmacy-App', type:'Web Application', ip:'10.0.3.1', classification:'High', status:'Warning', risk:35 },
+    { id:5, name:'Lab-Server-01', type:'Server', ip:'10.0.1.20', classification:'Medium', status:'Secure', risk:8 },
+    { id:6, name:'Billing-DB', type:'Database', ip:'10.0.1.22', classification:'High', status:'Secure', risk:20 },
+  ],
+  vulns: [
+    { id:1, cve:'CVE-2024-1234', asset:'Patient-DB-01', desc:'Remote code execution via SQL injection', cvss:9.8, severity:'Critical', status:'Open' },
+    { id:2, cve:'CVE-2024-5678', asset:'EMR-Server-01', desc:'Privilege escalation via unpatched kernel', cvss:8.1, severity:'High', status:'In Progress' },
+    { id:3, cve:'CVE-2024-9012', asset:'Pharmacy-App', desc:'Cross-site scripting (XSS) in input field', cvss:6.5, severity:'Medium', status:'Open' },
+    { id:4, cve:'CVE-2023-4567', asset:'Admin-Portal', desc:'Insecure direct object reference', cvss:7.4, severity:'High', status:'Open' },
+    { id:5, cve:'CVE-2024-2345', asset:'Billing-DB', desc:'Default credentials not changed', cvss:9.1, severity:'Critical', status:'Open' },
+  ],
+  compliance: [
+    { control:'Access Control Policy', status:'Implemented' },
+    { control:'Audit Log Management', status:'Implemented' },
+    { control:'Data Encryption (Transit)', status:'Implemented' },
+    { control:'Data Encryption (Rest)', status:'Partial' },
+    { control:'PHI Access Monitoring', status:'Implemented' },
+    { control:'Incident Response Plan', status:'Implemented' },
+    { control:'User Authentication (MFA)', status:'Partial' },
+    { control:'Vulnerability Scanning', status:'Implemented' },
+    { control:'Network Segmentation', status:'Implemented' },
+    { control:'Backup & Recovery Plan', status:'Implemented' },
+    { control:'Employee Security Training', status:'Partial' },
+    { control:'Physical Security Controls', status:'Implemented' },
+    { control:'Third-party Risk Assessment', status:'Not Implemented' },
+    { control:'Data Retention Policy', status:'Implemented' },
+    { control:'PHI Disclosure Tracking', status:'Not Implemented' },
+    { control:'Firewall & IDS/IPS', status:'Implemented' },
+  ],
+  phiFlags: [
+    { source:'/logs/patient-export.csv', keywords:['MRN','Patient ID','DOB'], risk:'High', flagged:'10 min ago', status:'Open' },
+    { source:'/backup/ehr-2024-03.db', keywords:['Aadhaar','Diagnosis'], risk:'Critical', flagged:'2 hrs ago', status:'Open' },
+    { source:'/temp/lab-results.txt', keywords:['MRN'], risk:'Medium', flagged:'Yesterday', status:'Resolved' },
+  ],
+  logLines: []
+};
+
+// ── LOGIN ──────────────────────────────────────────────
+function showLogin(role) {
+  document.getElementById('user-login-screen').classList.toggle('hidden', role !== 'user');
+  document.getElementById('admin-login-screen').classList.toggle('hidden', role !== 'admin');
+}
+
+function doUserLogin() {
+  const id = document.getElementById('user-login-id').value.trim();
+  const pass = document.getElementById('user-login-pass').value;
+  if (id === 'user' && pass === 'user123') {
+    document.getElementById('user-login-screen').classList.add('hidden');
+    document.getElementById('switcher').style.display = 'flex';
+    launchInterface('user');
+  } else {
+    document.getElementById('user-login-error').classList.add('show');
+    pushLiveAlert('🔑','Failed User Login',`Username "${id}" entered wrong password — Brute force risk. IP: 127.0.0.1`,'Critical','login');
+    showLiveAlertPopup('🔑','FAILED USER LOGIN',`Username <b>"${id || '(empty)'}"</b> entered an incorrect password!<br>⚠ Brute force risk detected. IP: 127.0.0.1`);
+    pushAILogEntry('CRITICAL','AUTH_FAILURE',`Failed login — user="${id}" incorrect password — attempt #${++appState.failedLoginCount}`);
+    setTimeout(() => document.getElementById('user-login-error').classList.remove('show'), 3000);
+  }
+}
+
+function doAdminLogin() {
+  const id = document.getElementById('admin-login-id').value.trim();
+  const pass = document.getElementById('admin-login-pass').value;
+  if (id === 'admin' && pass === 'admin123') {
+    document.getElementById('admin-login-screen').classList.add('hidden');
+    document.getElementById('switcher').style.display = 'flex';
+    launchInterface('admin');
+  } else {
+    document.getElementById('admin-login-error').classList.add('show');
+    pushLiveAlert('🔑','Failed Admin Login Attempt',`Admin ID "${id}" — Unauthorized access attempt. Possible insider threat.`,'Critical','login');
+    showLiveAlertPopup('🛡️','ADMIN LOGIN FAILED',`Admin ID <b>"${id || '(empty)'}"</b> — Incorrect credentials! Unauthorized access attempt detected.<br>⚠ Possible insider threat.`);
+    pushAILogEntry('CRITICAL','ADMIN_AUTH_FAILURE',`Unauthorized admin login attempt — id="${id}" — escalation risk`);
+    setTimeout(() => document.getElementById('admin-login-error').classList.remove('show'), 3000);
+  }
+}
+
+function launchInterface(iface) {
+  document.getElementById('user-interface').style.display = iface === 'user' ? 'flex' : 'none';
+  document.getElementById('admin-interface').style.display = iface === 'admin' ? 'flex' : 'none';
+  document.getElementById('btn-user').className = 'sw-btn' + (iface === 'user' ? ' active-user' : '');
+  document.getElementById('btn-admin').className = 'sw-btn' + (iface === 'admin' ? ' active-admin' : '');
+  appState.currentInterface = iface;
+  if (iface === 'admin') initAdminData();
+}
+
+function requireReloginSwitch(target) {
+  document.getElementById('user-interface').style.display = 'none';
+  document.getElementById('admin-interface').style.display = 'none';
+  document.getElementById('switcher').style.display = 'none';
+  showLogin(target);
+}
+
+function logoutUser() {
+  document.getElementById('user-interface').style.display = 'none';
+  document.getElementById('switcher').style.display = 'none';
+  document.getElementById('user-login-id').value = '';
+  document.getElementById('user-login-pass').value = '';
+  showLogin('user');
+}
+
+function logoutAdmin() {
+  document.getElementById('admin-interface').style.display = 'none';
+  document.getElementById('switcher').style.display = 'none';
+  document.getElementById('admin-login-id').value = '';
+  document.getElementById('admin-login-pass').value = '';
+  showLogin('admin');
+}
+
+// ── NAVIGATION ─────────────────────────────────────────
+const userPageNames = {
+  home:'Patient Home','patient-details':'Patient Details','medical-reports':'Medical Report',
+  lab:'Lab',billing:'Billing',pharmacy:'Pharmacy',appointments:'Appointment',profile:'My Profile'
+};
+function userNav(page) {
+  document.querySelectorAll('#user-interface .page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#user-interface .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('upage-' + page).classList.add('active');
+  const navEl = document.querySelector(`#user-interface [onclick="userNav('${page}')"]`);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('user-page-title').textContent = userPageNames[page] || page;
+  document.getElementById('user-breadcrumb').textContent = 'HealthShield / ' + (userPageNames[page] || page);
+  if (page === 'appointments') renderAppointments();
+}
+
+const adminPageNames = {
+  dashboard:'Security Dashboard','live-alerts':'Live Security Alerts',
+  assets:'Asset Monitoring',vulnerabilities:'Vulnerability Tracking',
+  phi:'PHI Risk Monitor',compliance:'Compliance Monitoring','ai-log':'AI Log Anomaly Detection'
+};
+function adminNav(page) {
+  document.querySelectorAll('#admin-interface .page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#admin-interface .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('apage-' + page).classList.add('active');
+  const navEl = document.querySelector(`#admin-interface [onclick="adminNav('${page}')"]`);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('admin-page-title').textContent = adminPageNames[page] || page;
+  document.getElementById('admin-breadcrumb').textContent = 'HealthShield / Admin / ' + (adminPageNames[page] || page);
+}
+
+// ── MODALS ─────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'add-vuln-modal') {
+    document.getElementById('new-vuln-asset').innerHTML = appState.assets.map(a => `<option>${a.name}</option>`).join('');
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => {
+  document.querySelectorAll('.modal-overlay').forEach(m => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── TOAST ──────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type==='success'?'✓':type==='error'?'✗':type==='warn'?'⚠':'ℹ';
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; t.style.transition='0.3s'; setTimeout(()=>t.remove(),300); }, 4000);
+}
+
+function showLiveAlertPopup(icon, title, detail, isWarn=false) {
+  const stack = document.getElementById('live-alert-stack');
+  const popup = document.createElement('div');
+  popup.className = `live-alert-popup${isWarn?' warn-popup':''}`;
+  popup.innerHTML = `
+    <div class="pop-icon">${icon}</div>
+    <div class="pop-body">
+      <div class="pop-title">🔴 LIVE ALERT — ${title}</div>
+      <div class="pop-detail">${detail}</div>
+      <div class="pop-time">${new Date().toLocaleTimeString()} — HealthShield Security Monitor</div>
+    </div>
+    <button class="pop-close" onclick="this.closest('.live-alert-popup').remove()">✕</button>`;
+  stack.insertAdjacentElement('afterbegin', popup);
+  // Auto remove after 6 seconds
+  setTimeout(() => {
+    popup.style.animation = 'popOut 0.3s ease forwards';
+    setTimeout(() => popup.remove(), 300);
+  }, 6000);
+  // Limit stack to 4
+  while (stack.children.length > 4) stack.removeChild(stack.lastChild);
+}
+
+// ── AI LOG ENTRY ───────────────────────────────────────
+function pushAILogEntry(level, type, detail) {
+  const terminal = document.getElementById('log-terminal');
+  if (!terminal) return;
+  const div = document.createElement('div');
+  const cls = level==='CRITICAL'?'anomaly':level==='WARN'?'warn':'info';
+  div.className = 'log-line ' + cls;
+  div.textContent = `[${new Date().toISOString().replace('T',' ').slice(0,19)}] ${level} [${type}] ${detail}`;
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+// ── LIVE ALERT SYSTEM ──────────────────────────────────
+function now() { return new Date().toLocaleTimeString(); }
+
+function pushLiveAlert(icon, title, detail, severity, type='general') {
+  appState.alertCount++;
+  if (type==='login') appState.failedLoginCount++;
+  if (type==='download') appState.excessDownloadCount++;
+  if (type==='suspicious') appState.suspiciousCount++;
+
+  const els = {
+    dashCount: document.getElementById('dash-alert-count'),
+    badge: document.getElementById('alerts-badge'),
+    total: document.getElementById('total-alerts-count'),
+    fail: document.getElementById('failed-logins-count'),
+    dl: document.getElementById('excess-dl-count'),
+    sus: document.getElementById('suspicious-count')
+  };
+  if (els.dashCount) els.dashCount.textContent = appState.alertCount;
+  if (els.badge) els.badge.textContent = appState.alertCount;
+  if (els.total) els.total.textContent = appState.alertCount;
+  if (els.fail) els.fail.textContent = appState.failedLoginCount;
+  if (els.dl) els.dl.textContent = appState.excessDownloadCount;
+  if (els.sus) els.sus.textContent = appState.suspiciousCount;
+
+  const colorMap = { Critical:'var(--danger)', Warning:'var(--warn)', High:'var(--warn)', Info:'var(--accent)' };
+  const badgeMap = { Critical:'badge-critical', Warning:'badge-warning', High:'badge-high', Info:'badge-info' };
+  const color = colorMap[severity] || 'var(--muted)';
+  const badgeCls = badgeMap[severity] || 'badge-info';
+
+  const itemHtml = `
+    <div class="feed-item">
+      <div class="feed-icon">${icon}</div>
+      <div class="feed-body">
+        <div class="feed-title">${title}</div>
+        <div class="feed-detail">${detail}</div>
+      </div>
+      <div class="feed-time" style="color:${color}">${now()}<br><span class="badge ${badgeCls}" style="font-size:9px">${severity}</span></div>
+    </div>`;
+
+  const liveFeed = document.getElementById('live-alert-feed');
+  if (liveFeed) {
+    if (liveFeed.querySelector('[style*="Monitoring active"]')) liveFeed.innerHTML = '';
+    liveFeed.insertAdjacentHTML('afterbegin', itemHtml);
+    if (liveFeed.children.length > 20) liveFeed.removeChild(liveFeed.lastChild);
+  }
+
+  if (type === 'login') {
+    const loginLog = document.getElementById('login-attempt-log');
+    if (loginLog) {
+      if (loginLog.querySelector('[style*="No login"]')) loginLog.innerHTML = '';
+      loginLog.insertAdjacentHTML('afterbegin', itemHtml);
+    }
+  }
+
+  const dashList = document.getElementById('dash-alerts-list');
+  if (dashList) {
+    if (dashList.querySelector('[style*="No alerts yet"]')) dashList.innerHTML = '';
+    const shortItem = `<div class="alert-item"><div class="alert-dot ${severity.toLowerCase()}"></div><div><div class="alert-msg">${title}</div><div class="alert-time">${now()} — ${detail.substring(0,60)}...</div></div></div>`;
+    dashList.insertAdjacentHTML('afterbegin', shortItem);
+    while (dashList.children.length > 5) dashList.removeChild(dashList.lastChild);
+  }
+
+  if (els.badge) {
+    els.badge.style.transform = 'scale(1.4)';
+    setTimeout(() => { els.badge.style.transform = ''; }, 300);
+  }
+}
+
+function clearAlertFeed() {
+  const f = document.getElementById('live-alert-feed');
+  if (f) f.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">// Feed cleared. Monitoring active.</div>';
+  showToast('Alert feed cleared','info');
+}
+
+// ── DOWNLOAD + PIN ─────────────────────────────────────
+function triggerDownload(key, name) {
+  appState.pendingDownload = { key, name };
+  document.getElementById('pin-doc-name').textContent = 'Document: ' + name;
+  resetPin();
+  openModal('pin-modal');
+}
+
+function resetPin() {
+  appState.pinBuffer = '';
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('pd' + i);
+    if (d) d.classList.remove('filled');
+  }
+  const e = document.getElementById('pin-error');
+  if (e) e.style.display = 'none';
+}
+
+function pinKey(val) {
+  if (val === 'clear') { resetPin(); return; }
+  if (val === 'del') {
+    if (appState.pinBuffer.length > 0) {
+      appState.pinBuffer = appState.pinBuffer.slice(0,-1);
+      document.getElementById('pd' + appState.pinBuffer.length).classList.remove('filled');
+    }
+    return;
+  }
+  if (appState.pinBuffer.length >= 4) return;
+  appState.pinBuffer += val;
+  document.getElementById('pd' + (appState.pinBuffer.length - 1)).classList.add('filled');
+  if (appState.pinBuffer.length === 4) setTimeout(() => checkPin(), 150);
+}
+
+function checkPin() {
+  if (appState.pinBuffer === '1234') {
+    closeModal('pin-modal');
+    resetPin();
+    performDownload(appState.pendingDownload.key, appState.pendingDownload.name);
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    const docName = appState.pendingDownload?.name || 'unknown file';
+    pushLiveAlert('🔐','Wrong PIN — Download Blocked',`Incorrect PIN for: "${docName}" — Possible unauthorized download attempt.`,'Critical','suspicious');
+    showLiveAlertPopup('🔐','WRONG PIN — DOWNLOAD BLOCKED',`Incorrect PIN entered for document <b>"${docName}"</b>!<br>⚠ Unauthorized download attempt detected. Admin has been alerted.`, false);
+    pushAILogEntry('CRITICAL','PIN_FAILURE',`Wrong PIN for download: "${docName}" — potential data exfiltration`);
+    showToast('🚨 Wrong PIN — Admin alerted','error');
+    setTimeout(() => resetPin(), 1000);
+  }
+}
+
+function performDownload(key, name) {
+  if (!appState.downloadCounts[key]) appState.downloadCounts[key] = 0;
+  appState.downloadCounts[key]++;
+  const count = appState.downloadCounts[key];
+
+  const dlLog = document.getElementById('download-activity-log');
+  if (dlLog) {
+    if (dlLog.querySelector('[style*="No download"]')) dlLog.innerHTML = '';
+    const statusColor = count > 2 ? 'var(--danger)' : count === 2 ? 'var(--warn)' : 'var(--accent3)';
+    dlLog.insertAdjacentHTML('afterbegin', `
+      <div class="feed-item">
+        <div class="feed-icon">⬇</div>
+        <div class="feed-body">
+          <div class="feed-title">${name}</div>
+          <div class="feed-detail">Download #${count} — User: Priya Sharma (MRN-00234)</div>
+        </div>
+        <div class="feed-time" style="color:${statusColor}">${now()}<br><span class="badge ${count>2?'badge-critical':'badge-info'}" style="font-size:9px">#${count}</span></div>
+      </div>`);
+  }
+
+  const dlMonitor = document.getElementById('download-monitor-list');
+  if (dlMonitor) {
+    if (dlMonitor.querySelector('[style*="No download"]')) dlMonitor.innerHTML = '';
+    dlMonitor.insertAdjacentHTML('afterbegin', `
+      <div class="alert-item">
+        <div class="alert-dot ${count > 2 ? 'critical' : 'info'}"></div>
+        <div>
+          <div class="alert-msg">⬇ ${name}</div>
+          <div class="alert-time">${now()} — Download #${count} by Priya Sharma${count > 2 ? ' — ⚠ FLAGGED' : ''}</div>
+        </div>
+      </div>`);
+    while (dlMonitor.children.length > 5) dlMonitor.removeChild(dlMonitor.lastChild);
+  }
+
+  if (count > 2) {
+    pushLiveAlert('⬇','Excess Download Alert',`"${name}" downloaded ${count} times by Priya Sharma (MRN-00234) — Suspicious activity`,'Critical','download');
+    showToast(`⚠ Admin alerted: Document downloaded ${count} times`,'warn');
+  } else {
+    showToast(`✓ Download started: ${name} (Download #${count})`,'success');
+  }
+
+  const content = `HealthShield Medical Records Export\n====================================\nDocument: ${name}\nExport Key: ${key}\nPatient: Priya Sharma\nRM No.: MRN-00234\nMobile: +91 93650 83378\nEmail: majumderroyal@gmail.com\nAddress: Bangalore\nGenerated: ${new Date().toLocaleString()}\nDigital Signature: VERIFIED\n====================================\nThis document is confidential and intended for authorized personnel only.\nDownload count: ${count}\n`;
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name.replace(/[^a-zA-Z0-9 ]/g,'_') + '.txt';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── APPOINTMENTS ───────────────────────────────────────
+function renderAppointments() {
+  const tbody = document.getElementById('appt-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = appState.appointments.map(a => `
+    <tr>
+      <td>${a.patient}</td>
+      <td class="mono text-accent" style="font-size:12px">${a.rm}</td>
+      <td>${a.doctor}</td>
+      <td style="font-size:12px">${a.dept}</td>
+      <td class="mono" style="font-size:12px">${a.date}</td>
+      <td class="mono" style="font-size:12px">${a.time}</td>
+      <td style="font-size:12px">${a.type}</td>
+      <td><span class="badge ${a.status==='Upcoming'?'badge-info':'badge-secure'}">${a.status}</span></td>
+      <td style="font-size:11px;color:var(--muted);max-width:120px">${a.notes}</td>
+      <td><button class="btn-download" onclick="triggerDownload('appt-${a.id}','Appointment — ${a.doctor}')">⬇ PDF</button></td>
+    </tr>`).join('');
+}
+
+function addAppointment() {
+  const date = document.getElementById('appt-date').value;
+  if (!date) { showToast('Please select a date','error'); return; }
+  appState.appointments.unshift({
+    id: Date.now(),
+    patient: document.getElementById('appt-patient').value.trim(),
+    rm: document.getElementById('appt-rm').value.trim(),
+    doctor: document.getElementById('appt-doctor').value,
+    dept: document.getElementById('appt-dept').value,
+    date, time: document.getElementById('appt-time').value,
+    type: document.getElementById('appt-type').value,
+    status: 'Upcoming',
+    notes: document.getElementById('appt-notes').value
+  });
+  renderAppointments();
+  closeModal('add-appt-modal');
+  showToast(`Appointment booked with ${appState.appointments[0].doctor}`,'success');
+  document.getElementById('appt-notes').value = '';
+}
+
+// ── ASSETS ─────────────────────────────────────────────
+function renderAssets() {
+  const tbody = document.getElementById('asset-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = appState.assets.map(a => `
+    <tr>
+      <td><span style="font-family:var(--mono);color:var(--text-bright)">${a.name}</span></td>
+      <td style="color:var(--muted)">${a.type}</td>
+      <td><span style="font-family:var(--mono);font-size:12px">${a.ip}</span></td>
+      <td><span class="badge badge-${a.classification.toLowerCase()}">${a.classification}</span></td>
+      <td><span class="badge badge-${a.status.toLowerCase()}">${a.status}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:var(--mono);font-size:12px;color:${a.risk>60?'var(--danger)':a.risk>30?'var(--warn)':'var(--accent3)'}">${a.risk}</span>
+          <div class="progress-bar" style="width:55px"><div class="progress-fill ${a.risk>60?'fill-red':a.risk>30?'fill-warn':'fill-green'}" style="width:${a.risk}%"></div></div>
+        </div>
+      </td>
+      <td><button class="btn-sm btn-ghost" style="font-size:11px" onclick="deleteAsset(${a.id})">✕ Remove</button></td>
+    </tr>`).join('');
+}
+
+function addAsset() {
+  const name = document.getElementById('new-asset-name').value.trim();
+  if (!name) { showToast('Asset name required','error'); return; }
+  appState.assets.push({
+    id: Date.now(), name,
+    type: document.getElementById('new-asset-type').value,
+    ip: document.getElementById('new-asset-ip').value || '0.0.0.0',
+    classification: document.getElementById('new-asset-class').value,
+    status: document.getElementById('new-asset-status').value,
+    risk: Math.floor(Math.random() * 60) + 5
+  });
+  renderAssets();
+  document.getElementById('stat-assets').textContent = appState.assets.length;
+  closeModal('add-asset-modal');
+  showToast(`Asset "${name}" added`,'success');
+  document.getElementById('new-asset-name').value = '';
+}
+
+function deleteAsset(id) {
+  appState.assets = appState.assets.filter(a => a.id !== id);
+  renderAssets();
+  showToast('Asset removed','info');
+}
+
+// ── VULNERABILITIES ────────────────────────────────────
+function getSeverity(c) { return c>=9?'Critical':c>=7?'High':c>=4?'Medium':'Low'; }
+
+function renderVulns() {
+  const filter = document.getElementById('vuln-filter')?.value || '';
+  const rows = appState.vulns.filter(v => !filter || v.severity === filter);
+  const tbody = document.getElementById('vuln-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map(v => `
+    <tr>
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">${v.cve}</span></td>
+      <td>${v.asset}</td>
+      <td style="max-width:200px;font-size:12px;color:var(--muted)">${v.desc}</td>
+      <td><span style="font-family:var(--mono);color:${v.cvss>=9?'var(--danger)':v.cvss>=7?'var(--warn)':'var(--text)'}">${v.cvss}</span></td>
+      <td><span class="badge badge-${v.severity.toLowerCase()}">${v.severity}</span></td>
+      <td><span style="font-size:12px;color:${v.status==='Resolved'?'var(--accent3)':v.status==='In Progress'?'var(--warn)':'var(--danger)'}">${v.status}</span></td>
+    </tr>`).join('');
+}
+
+function addVuln() {
+  const cve = document.getElementById('new-cve-id').value.trim();
+  if (!cve) { showToast('CVE ID required','error'); return; }
+  const cvss = parseFloat(document.getElementById('new-cvss').value) || 5.0;
+  appState.vulns.push({
+    id: Date.now(), cve,
+    asset: document.getElementById('new-vuln-asset').value,
+    desc: document.getElementById('new-vuln-desc').value || 'No description',
+    cvss, severity: getSeverity(cvss),
+    status: document.getElementById('new-vuln-status').value
+  });
+  renderVulns();
+  document.getElementById('stat-vulns').textContent = appState.vulns.length;
+  document.getElementById('vuln-badge').textContent = appState.vulns.filter(v=>v.severity==='Critical').length;
+  closeModal('add-vuln-modal');
+  showToast(`Vulnerability ${cve} added`,'success');
+}
+
+// ── PHI ────────────────────────────────────────────────
+const PHI_KEYWORDS = ['patient id','aadhaar','mrn','diagnosis','dob','date of birth','ssn','insurance','prescription','medical record'];
+
+function scanPHI() {
+  const text = document.getElementById('phi-text').value.toLowerCase();
+  if (!text) { showToast('Please enter text to scan','error'); return; }
+  const found = PHI_KEYWORDS.filter(k => text.includes(k));
+  const result = document.getElementById('phi-result');
+  if (found.length) {
+    result.innerHTML = `<div style="background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:12px"><div style="color:var(--danger);font-weight:600;margin-bottom:8px">⚠ PHI Data Detected!</div>${found.map(k=>`<span class="badge badge-critical" style="margin:2px">${k}</span>`).join('')}<div style="font-size:12px;color:var(--muted);margin-top:8px">Risk Level: <span class="text-red">HIGH</span></div></div>`;
+    pushLiveAlert('🔒','PHI Scan Alert',`PHI keywords found: ${found.join(', ')}`,'High','suspicious');
+  } else {
+    result.innerHTML = `<div style="background:rgba(0,255,157,0.06);border:1px solid rgba(0,255,157,0.2);border-radius:8px;padding:12px;color:var(--accent3)">✓ No PHI keywords detected</div>`;
+  }
+}
+
+function runFileScan() {
+  const paths = ['/logs/patient-export.csv','/backup/ehr-2024.db','/tmp/lab-results.txt','/uploads/billing.xlsx'];
+  const risks = ['Low','Medium','High','Critical'];
+  document.getElementById('file-scan-list').innerHTML = paths.map(p => {
+    const risk = risks[Math.floor(Math.random()*4)];
+    return `<div class="compliance-item"><div class="compliance-check ${risk==='Low'||risk==='Medium'?'check-partial':'check-no'}">${risk==='Low'?'✓':'!'}</div><span style="font-family:var(--mono);font-size:11px">${p}</span><span class="badge badge-${risk.toLowerCase()}" style="font-size:10px;margin-left:auto">${risk}</span></div>`;
+  }).join('');
+}
+
+function renderPHIFlags() {
+  const tbody = document.getElementById('phi-flags-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = appState.phiFlags.map(f => `
+    <tr>
+      <td style="font-family:var(--mono);font-size:11px">${f.source}</td>
+      <td>${f.keywords.map(k=>`<span class="badge badge-high" style="font-size:10px;margin:1px">${k}</span>`).join('')}</td>
+      <td><span class="badge badge-${f.risk.toLowerCase()}">${f.risk}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${f.flagged}</td>
+      <td><span style="font-size:12px;color:${f.status==='Open'?'var(--danger)':'var(--accent3)'}">${f.status}</span></td>
+    </tr>`).join('');
+}
+
+// ── COMPLIANCE ─────────────────────────────────────────
+function renderCompliance() {
+  const cl = document.getElementById('compliance-list');
+  if (!cl) return;
+  cl.innerHTML = appState.compliance.map(c => `
+    <div class="compliance-item">
+      <div class="compliance-check ${c.status==='Implemented'?'check-done':c.status==='Partial'?'check-partial':'check-no'}">${c.status==='Implemented'?'✓':c.status==='Partial'?'~':'✗'}</div>
+      <span class="compliance-name">${c.control}</span>
+      <span class="compliance-status" style="color:${c.status==='Implemented'?'var(--accent3)':c.status==='Partial'?'var(--warn)':'var(--danger)'}">${c.status}</span>
+    </div>`).join('');
+}
+
+// ── AI LOG ─────────────────────────────────────────────
+const sampleLogs = [
+  '[2024-03-15 08:00:01] INFO System startup completed',
+  '[2024-03-15 08:30:12] INFO Login success user=nurse01 ip=10.0.1.5',
+  '[2024-03-15 09:15:01] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:15:02] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:15:03] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:15:04] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:15:05] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:15:06] ERROR Login failed user=admin ip=192.168.99.1',
+  '[2024-03-15 09:20:10] INFO Login success user=doctor02 ip=10.0.1.8',
+  '[2024-03-15 09:45:00] INFO Login success user=billing01 ip=10.0.3.2',
+  '[2024-03-15 02:30:11] WARN Off-hours access user=unknown ip=10.4.22.8',
+  '[2024-03-15 02:30:12] WARN Off-hours access user=unknown ip=10.4.22.8',
+  '[2024-03-15 02:30:13] ERROR Unauthorized file access /backup/ehr user=unknown',
+];
+
+function loadSampleLog() { appState.logLines = [...sampleLogs]; showToast('Sample log loaded','info'); }
+
+function loadLogFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => { appState.logLines = e.target.result.split('\n').filter(l=>l.trim()); showToast(`Log loaded: ${appState.logLines.length} entries`,'success'); };
+  reader.readAsText(file);
+}
+
+function analyzeLog() {
+  if (!appState.logLines.length) { showToast('Please load a log file first','error'); return; }
+  const terminal = document.getElementById('log-terminal');
+  terminal.innerHTML = `<div class="log-line info">// Analyzing ${appState.logLines.length} log entries...</div>`;
+  const ipFailCount = {}, anomalies = [];
+
+  appState.logLines.forEach((line, i) => {
+    const lower = line.toLowerCase();
+    const ipMatch = line.match(/ip=(\S+)/);
+    const ip = ipMatch ? ipMatch[1] : null;
+    if ((lower.includes('failed') || lower.includes('error')) && ip) {
+      ipFailCount[ip] = (ipFailCount[ip] || 0) + 1;
+    }
+    setTimeout(() => {
+      const div = document.createElement('div');
+      const isAnomaly = lower.includes('error') && (lower.includes('failed') || lower.includes('unauthorized'));
+      const isWarn = lower.includes('warn');
+      div.className = `log-line ${isAnomaly?'anomaly':isWarn?'warn':lower.includes('info')?'info':'normal'}`;
+      div.textContent = line;
+      terminal.appendChild(div);
+      terminal.scrollTop = terminal.scrollHeight;
+    }, i * 60 + Math.random() * 40);
+  });
+
+  setTimeout(() => {
+    Object.entries(ipFailCount).forEach(([ip, count]) => {
+      if (count >= 5) {
+        anomalies.push({ type:'Brute Force', ip, detail:`${count} failed login attempts`, severity:'Critical' });
+        pushLiveAlert('🔑',`Brute Force: ${ip}`,`${count} failed login attempts detected`,'Critical','login');
+      }
+    });
+    const offHours = appState.logLines.filter(l => l.match(/\s0[0-6]:/));
+    if (offHours.length) {
+      anomalies.push({ type:'Off-Hours Access', ip:'Multiple', detail:`${offHours.length} events midnight–6AM`, severity:'Warning' });
+      pushLiveAlert('⚡','Off-Hours Access',`${offHours.length} events between 12AM–6AM`,'Warning','suspicious');
+    }
+    document.getElementById('stat-total-lines').textContent = appState.logLines.length;
+    document.getElementById('stat-anomalies').textContent = anomalies.length;
+    document.getElementById('stat-failed').textContent = appState.logLines.filter(l=>l.toLowerCase().includes('failed')).length;
+    const ips = new Set(appState.logLines.map(l=>{const m=l.match(/ip=(\S+)/);return m?m[1]:null}).filter(Boolean));
+    document.getElementById('stat-unique-ips').textContent = ips.size;
+    if (anomalies.length) {
+      const box = document.getElementById('anomaly-alerts');
+      box.style.display = 'block';
+      document.getElementById('anomaly-list').innerHTML = anomalies.map(a => `
+        <div class="alert-item">
+          <div class="alert-dot ${a.severity.toLowerCase()}"></div>
+          <div>
+            <div style="font-weight:600;color:var(--text-bright)">${a.type}</div>
+            <div class="alert-msg">${a.detail} — IP: ${a.ip}</div>
+            <div class="alert-time"><span class="badge badge-${a.severity==='Critical'?'critical':'high'}">${a.severity}</span></div>
+          </div>
+        </div>`).join('');
+    }
+    showToast(`Analysis complete — ${anomalies.length} anomalies`, anomalies.length ? 'error' : 'success');
+  }, appState.logLines.length * 60 + 600);
+}
+
+// ── VISUALS ────────────────────────────────────────────
+function renderHeatmap() {
+  const hm = document.getElementById('heatmap');
+  if (!hm) return;
+  const levels = [0,1,2,3,4,2,1,0,1,2,3,4,3,2,1,2,2,3,4,3,2,1,0,1,0,1,2,2,3,4,3,2];
+  const labels = ['EMR','DB01','XR','PHA','LAB','BDB','ADM','NET','WEB','API','VPN','FW','APP','SRV','DEV','BAK','LOG','USR','PHI','REC','AUD','ALT','SYS','MON','HIS','RPT','SCN','IDS','TKT','CAM','MDV','RDP'];
+  hm.innerHTML = levels.map((lvl, i) => `<div class="heat-cell heat-${lvl}" title="${labels[i]||'node'}: Risk ${lvl*25}%">${labels[i]||'?'}</div>`).join('');
+}
+
+function renderBarChart() {
+  const bc = document.getElementById('bar-chart');
+  if (!bc) return;
+  const weeks = ['W1','W2','W3','W4','W5','W6','W7','W8'];
+  const vals = [28,35,22,41,38,47,33,44];
+  const max = Math.max(...vals);
+  const colors = ['fill-cyan','fill-green','fill-cyan','fill-warn','fill-warn','fill-red','fill-green','fill-warn'];
+  bc.innerHTML = weeks.map((w, i) => `
+    <div class="bar-wrap">
+      <div class="bar ${colors[i]}" style="height:${(vals[i]/max)*90}%" title="Week ${i+1}: ${vals[i]} vulns"></div>
+      <div class="bar-label">${w}</div>
+    </div>`).join('');
+}
+
+// ── ADMIN INIT ─────────────────────────────────────────
+function initAdminData() {
+  renderAssets();
+  renderVulns();
+  renderCompliance();
+  renderPHIFlags();
+  renderHeatmap();
+  renderBarChart();
+  runFileScan();
+}
+
+// ── BOOT ───────────────────────────────────────────────
+showLogin('user');
+</script>
+</body>
+</html>
