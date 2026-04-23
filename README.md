@@ -52,34 +52,10 @@ The **My Profile** section displays only the authenticated user's personal detai
 
 | Field   | Value                   |
 |---------|-------------------------|
-| Name    | Majumder Royal          |
+| Name    | Royal Majumder          |
 | Mobile  | +91 93650 83378         |
 | Email   | majumderroyal@gmail.com |
 | Address | Bangalore               |
 
 Other sections (Patient Details, Treatment, Lab, Billing, Pharmacy) retain demo data.
 
----
-
-## 📁 Project Structure
-
-```
-hh8-major-project/
-├── index.html       ← Main application (all-in-one)
-├── README.md        ← This file
-├── CHANGELOG.md     ← Version history
-├── .gitignore
-├── assets/
-│   ├── css/         ← (styles embedded in index.html)
-│   ├── js/          ← (scripts embedded in index.html)
-│   └── images/
-├── pages/           ← Reserved for future expansion
-└── docs/
-    └── security-flow.md
-```
-
----
-
-## 📝 Developer
-
-**Majumder Royal** | HH8 Major Project
